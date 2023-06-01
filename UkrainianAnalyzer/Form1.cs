@@ -4,6 +4,7 @@ using System.Net.Http.Headers;
 using static System.Net.Mime.MediaTypeNames;
 using System.IO;
 using System.Text.RegularExpressions;
+using System.Drawing;
 
 namespace UkrainianAnalyzer
 {
@@ -11,10 +12,13 @@ namespace UkrainianAnalyzer
     {
         private TesseractEngine ocrEngine;
         private bool isSelecting = false;
+        private bool rectangleExist = false;
         private Rectangle selectedArea;
         private Bitmap capturedImage;
         private Point startPoint;
-        private bool hotkeyPressed; 
+        private bool hotkeyPressed;
+
+        UserRect rect;
 
         public Form1()
         {
@@ -26,53 +30,20 @@ namespace UkrainianAnalyzer
 
         private void pictureBoxMainPaint(object sender, PaintEventArgs e)
         {
-            if (isSelecting)
+            if (!rectangleExist)
             {
-                using Brush brush = new SolidBrush(Color.FromArgb(20, Color.Black));
-                e.Graphics.FillRectangle(brush, selectedArea);
-                using Pen pen = new Pen(Color.Cyan, 2f);
-                e.Graphics.DrawRectangle(pen, selectedArea);
+                ControlPaint.DrawReversibleFrame(selectedArea, Color.White, FrameStyle.Dashed);
             }
         }
 
         private void pictureBoxMain_Up(object sender, MouseEventArgs e)
         {
-            if (e.Button == MouseButtons.Left && isSelecting)
+            if (!rectangleExist)
             {
-                isSelecting = false;
-                hotkeyPressed = false;
-
-                capturedImage = new Bitmap(selectedArea.Width, selectedArea.Height);
-
-                using (Graphics graphics = Graphics.FromImage(capturedImage))
-                {
-                    graphics.DrawImage(pictureBoxMain.Image, 0, 0, selectedArea, GraphicsUnit.Pixel);
-                }
-
-                string tempImagePath = Path.GetTempFileName();
-                capturedImage.Save(tempImagePath, System.Drawing.Imaging.ImageFormat.MemoryBmp);
-
-                Pix pixImage = Pix.LoadFromFile(tempImagePath);
-
-                File.Delete(tempImagePath);
-
-                using (var page = ocrEngine.Process(pixImage))
-                {
-                    string extractedText = page.GetText();
-
-                    extractedText = RemoveEmptyLines(extractedText);
-
-                    if (extractedText.Length > 0)
-                    {
-                        Clipboard.SetText(extractedText);
-                    }
-
-                    this.FormBorderStyle = FormBorderStyle.Sizable;
-                    this.WindowState = FormWindowState.Minimized;
-                    Hide();
-                }
-
-                pictureBoxMain.Refresh();
+                rect = new UserRect(selectedArea);
+                rect.SetPictureBox(this.pictureBoxMain);
+                pictureBoxMain.Invalidate();
+                rectangleExist = true;
             }
         }
 
@@ -83,7 +54,11 @@ namespace UkrainianAnalyzer
 
         private void pictureBoxMain_Down(object sender, MouseEventArgs e)
         {
-            if (e.Button == MouseButtons.Left)
+            if (rectangleExist)
+            {
+                isSelecting = false;
+            }
+            else if (e.Button == MouseButtons.Left)
             {
                 isSelecting = true;
                 startPoint = e.Location;
@@ -104,6 +79,10 @@ namespace UkrainianAnalyzer
                 selectedArea = new Rectangle(x, y, width, height);
 
                 pictureBoxMain.Refresh();
+            }
+            else if (rect != null && rect.IsOverNode(e.Location))
+            {
+                isSelecting = false;
             }
         }
 
@@ -201,6 +180,52 @@ namespace UkrainianAnalyzer
             this.FormBorderStyle = FormBorderStyle.Sizable;
             this.WindowState = FormWindowState.Minimized;
             Hide();
+        }
+
+        private void Form1_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                isSelecting = false;
+                hotkeyPressed = false;
+
+                capturedImage = new Bitmap(rect.rectangle.Width, rect.rectangle.Height);
+
+                using (Graphics graphics = Graphics.FromImage(capturedImage))
+                {
+                    graphics.DrawImage(pictureBoxMain.Image, 0, 0, rect.rectangle, GraphicsUnit.Pixel);
+                }
+
+                string tempImagePath = Path.GetTempFileName();
+                capturedImage.Save(tempImagePath, System.Drawing.Imaging.ImageFormat.MemoryBmp);
+
+                Pix pixImage = Pix.LoadFromFile(tempImagePath);
+
+                File.Delete(tempImagePath);
+
+                using (var page = ocrEngine.Process(pixImage))
+                {
+                    string extractedText = page.GetText();
+
+                    extractedText = RemoveEmptyLines(extractedText);
+
+                    if (extractedText.Length > 0)
+                    {
+                        Clipboard.SetText(extractedText);
+                        //Clipboard.SetImage(capturedImage);
+                    }
+
+                    this.FormBorderStyle = FormBorderStyle.Sizable;
+                    this.WindowState = FormWindowState.Minimized;
+                    Hide();
+                }
+                rectangleExist = false;
+                selectedArea = Rectangle.Empty;
+                rect.rectangle = Rectangle.Empty;
+                rect = null;
+
+                pictureBoxMain.Refresh(); 
+            }
         }
     }
 }
