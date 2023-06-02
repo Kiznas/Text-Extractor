@@ -1,10 +1,15 @@
 using Tesseract;
 using System.Runtime.InteropServices;
 using System.Net.Http.Headers;
-using static System.Net.Mime.MediaTypeNames;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Drawing;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.TextBox;
+using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
+using System.Windows.Forms;
+using static System.Windows.Forms.DataFormats;
+using System;
 
 namespace UkrainianAnalyzer
 {
@@ -17,6 +22,7 @@ namespace UkrainianAnalyzer
         private Bitmap capturedImage;
         private Point startPoint;
         private bool hotkeyPressed;
+        private SettingsForm settings;
 
         UserRect rect;
 
@@ -26,13 +32,27 @@ namespace UkrainianAnalyzer
 
             int id = 0;
             RegisterHotKey(this.Handle, id, (int)KeyModifier.Shift, Keys.A.GetHashCode());
-        }
 
+            settings = new SettingsForm();
+            settings.StringChanged += ChangeOCRLanguage;
+
+            notifyIcon1.ContextMenuStrip = new ContextMenuStrip();
+
+            notifyIcon1.ContextMenuStrip.Items.AddRange(new ToolStripItem[]
+            {
+                new ToolStripMenuItem("SETTINGS", null, new EventHandler(Settings), "SETTINGS"),
+                new ToolStripMenuItem("EXIT", null, new EventHandler(Exit), "EXIT")
+            });
+        }
         private void pictureBoxMainPaint(object sender, PaintEventArgs e)
         {
             if (!rectangleExist)
             {
-                ControlPaint.DrawReversibleFrame(selectedArea, Color.White, FrameStyle.Dashed);
+                using (Pen pen = new Pen(Color.Cyan, 2))
+                {
+                    pen.DashStyle = System.Drawing.Drawing2D.DashStyle.Dash;
+                    e.Graphics.DrawRectangle(pen, selectedArea);
+                }
             }
         }
 
@@ -45,11 +65,6 @@ namespace UkrainianAnalyzer
                 pictureBoxMain.Invalidate();
                 rectangleExist = true;
             }
-        }
-
-        private string RemoveEmptyLines(string lines)
-        {
-            return Regex.Replace(lines, @"^\s*$\n|\r", string.Empty, RegexOptions.Multiline).TrimEnd();
         }
 
         private void pictureBoxMain_Down(object sender, MouseEventArgs e)
@@ -86,6 +101,68 @@ namespace UkrainianAnalyzer
             }
         }
 
+        private void Form1_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                isSelecting = false;
+                hotkeyPressed = false;
+
+
+                GraphicsPath path = new GraphicsPath();
+                path.AddRectangle(rect.rectangle);
+
+                Matrix matrix = new Matrix();
+                matrix.RotateAt(rect.rotationAngle, new PointF(rect.rectangle.Left + rect.rectangle.Width / 2, rect.rectangle.Top + rect.rectangle.Height / 2));
+
+                path.Transform(matrix);
+
+                RectangleF rotatedRect = path.GetBounds();
+
+                Bitmap rotatedImage = new Bitmap((int)rotatedRect.Width, (int)rotatedRect.Height);
+
+                using (Graphics graphics = Graphics.FromImage(rotatedImage))
+                {
+                    graphics.TranslateTransform(rotatedImage.Width / 2, rotatedImage.Height / 2);
+                    graphics.RotateTransform(-rect.rotationAngle);
+                    graphics.TranslateTransform(-rotatedImage.Width / 2, -rotatedImage.Height / 2);
+                    graphics.DrawImage(pictureBoxMain.Image, 0, 0, rotatedRect, GraphicsUnit.Pixel);
+                }
+
+                string tempImagePath = Path.GetTempFileName();
+                rotatedImage.Save(tempImagePath, System.Drawing.Imaging.ImageFormat.MemoryBmp);
+
+                Pix pixImage = Pix.LoadFromFile(tempImagePath);
+
+                File.Delete(tempImagePath);
+
+                using (var page = ocrEngine.Process(pixImage))
+                {
+                    string extractedText = page.GetText();
+
+                    extractedText = RemoveEmptyLines(extractedText);
+
+                    if (extractedText.Length > 0)
+                    {
+                        Clipboard.SetText(extractedText);
+                    }
+                    this.FormBorderStyle = FormBorderStyle.Sizable;
+                    this.WindowState = FormWindowState.Minimized;
+                }
+                
+                rectangleExist = false;
+                selectedArea = Rectangle.Empty;
+                rect.rectangle = Rectangle.Empty;
+                rect = null;
+
+                pictureBoxMain.Refresh();
+            }
+        }
+        private string RemoveEmptyLines(string lines)
+        {
+            return Regex.Replace(lines, @"^\s*$\n|\r", string.Empty, RegexOptions.Multiline).TrimEnd();
+        }
+
         private void CaptureScreenshot()
         {
             Point cursorPosition = Cursor.Position;
@@ -103,32 +180,25 @@ namespace UkrainianAnalyzer
             int newWidth = (int)(screenWidth * scaleFactor);
             int newHeight = (int)(screenHeight * scaleFactor);
 
-            using (capturedImage = new Bitmap(screenWidth, screenHeight))
+            capturedImage = new Bitmap(screenWidth, screenHeight);
+            using (Graphics graphics = Graphics.FromImage(capturedImage))
             {
-                using (Graphics graphics = Graphics.FromImage(capturedImage))
-                {
-                    graphics.CopyFromScreen(screenBounds.Left, screenBounds.Top, 0, 0, capturedImage.Size);
-                }
-
-                using (Graphics overlayGraphics = Graphics.FromImage(capturedImage))
-                {
-                    using (Brush brush = new SolidBrush(Color.FromArgb(10, Color.Black))) // 50% alpha black
-                    {
-                        overlayGraphics.FillRectangle(brush, new Rectangle(0, 0, screenWidth, screenHeight));
-                    }
-                }
-
-                pictureBoxMain.Image?.Dispose();
-
-                pictureBoxMain.Image = new Bitmap(capturedImage, newWidth, newHeight);
+                graphics.CopyFromScreen(screenBounds.Left, screenBounds.Top, 0, 0, capturedImage.Size);
             }
+
+            pictureBoxMain.Image?.Dispose();
+
+            pictureBoxMain.Image = new Bitmap(capturedImage, newWidth, newHeight);
+
+            //Clipboard.SetImage(capturedImage);
         }
+            
 
         [DllImport("user32.dll")]
-        private static extern bool RegisterHotKey(IntPtr hWnd, int id, int fsModifiers, int vk);
+        public static extern bool RegisterHotKey(IntPtr hWnd, int id, int fsModifiers, int vk);
 
         [DllImport("user32.dll")]
-        private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+        public static extern bool UnregisterHotKey(IntPtr hWnd, int id);
 
         protected override void WndProc(ref Message m)
         {
@@ -142,6 +212,8 @@ namespace UkrainianAnalyzer
                     _ = m.WParam.ToInt32();
 
                     Show();
+
+                    this.notifyIcon1.Visible = false;
 
                     this.WindowState = FormWindowState.Normal;
                     this.FormBorderStyle = FormBorderStyle.None;
@@ -162,7 +234,7 @@ namespace UkrainianAnalyzer
             UnregisterHotKey(this.Handle, 0);
         }
 
-        enum KeyModifier
+        public enum KeyModifier
         {
             None = 0,
             Alt = 1,
@@ -173,59 +245,41 @@ namespace UkrainianAnalyzer
 
         private void checkedListBox1_SelectedIndexChanged(object sender, EventArgs e)
         {
-            ocrEngine = new TesseractEngine("./tessdata", checkedListBox1.Text, EngineMode.Default);
-            ocrEngine.SetVariable("tessedit_pageseg_mode", "9");
-            ocrEngine.SetVariable("textord_min_linesize", "1");
+            ChangeOCRLanguage(checkedListBox1.Text);
             checkedListBox1.Visible = false;
             this.FormBorderStyle = FormBorderStyle.Sizable;
             this.WindowState = FormWindowState.Minimized;
-            Hide();
         }
 
-        private void Form1_KeyDown(object sender, KeyEventArgs e)
+        public void ChangeOCRLanguage(string lang)
         {
-            if (e.KeyCode == Keys.Enter)
-            {
-                isSelecting = false;
-                hotkeyPressed = false;
-
-                capturedImage = new Bitmap(rect.rectangle.Width, rect.rectangle.Height);
-
-                using (Graphics graphics = Graphics.FromImage(capturedImage))
-                {
-                    graphics.DrawImage(pictureBoxMain.Image, 0, 0, rect.rectangle, GraphicsUnit.Pixel);
-                }
-
-                string tempImagePath = Path.GetTempFileName();
-                capturedImage.Save(tempImagePath, System.Drawing.Imaging.ImageFormat.MemoryBmp);
-
-                Pix pixImage = Pix.LoadFromFile(tempImagePath);
-
-                File.Delete(tempImagePath);
-
-                using (var page = ocrEngine.Process(pixImage))
-                {
-                    string extractedText = page.GetText();
-
-                    extractedText = RemoveEmptyLines(extractedText);
-
-                    if (extractedText.Length > 0)
-                    {
-                        Clipboard.SetText(extractedText);
-                        //Clipboard.SetImage(capturedImage);
-                    }
-
-                    this.FormBorderStyle = FormBorderStyle.Sizable;
-                    this.WindowState = FormWindowState.Minimized;
-                    Hide();
-                }
-                rectangleExist = false;
-                selectedArea = Rectangle.Empty;
-                rect.rectangle = Rectangle.Empty;
-                rect = null;
-
-                pictureBoxMain.Refresh(); 
-            }
+            ocrEngine = new TesseractEngine("./tessdata", lang, EngineMode.Default);
+            ocrEngine.SetVariable("tessedit_pageseg_mode", "9");
+            ocrEngine.SetVariable("textord_min_linesize", "1");
         }
+
+        private void Form1_Resize(object sender, EventArgs e)
+        {
+            if (WindowState == FormWindowState.Minimized)
+            {
+                this.Hide();
+                notifyIcon1.Visible = true;
+            }
+            else if (FormWindowState.Normal == this.WindowState)
+            { notifyIcon1.Visible = false; }
+
+        }
+
+        private void Settings(object? sender, EventArgs e)
+        {
+            settings.Show();
+            settings.WindowState = FormWindowState.Normal;
+        }
+
+        private void Exit(object? sender, EventArgs e)
+        {
+            Application.Exit();
+        }
+
     }
 }

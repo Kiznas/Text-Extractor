@@ -1,3 +1,5 @@
+using System.Drawing;
+
 namespace UkrainianAnalyzer
 { 
     internal static class Program

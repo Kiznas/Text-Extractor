@@ -4,6 +4,7 @@ using System.Text;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
+using Tesseract;
 
 namespace UkrainianAnalyzer
 {
@@ -16,10 +17,11 @@ namespace UkrainianAnalyzer
         private bool mMove = false;
         private int oldX;
         private int oldY;
-        private int sizeNodeRect = 10;
+        private int sizeNodeRect = 12;
+        private const int rotationHandleSize = 15;
         private Bitmap mBmp = null;
         public PosSizableRect nodeSelected = PosSizableRect.None;
-        private int angle = 30;
+        public float rotationAngle = 0;
 
         public enum PosSizableRect
         {
@@ -31,8 +33,8 @@ namespace UkrainianAnalyzer
             RightMiddle,
             RightBottom,
             BottomMiddle,
+            RotationHandle,
             None
-
         };
 
         public UserRect(Rectangle r)
@@ -40,18 +42,49 @@ namespace UkrainianAnalyzer
             rectangle = r;
             mIsClick = false;
         }
-
         public void Draw(Graphics g)
         {
-            Pen pen = new Pen(Color.White);
+            Pen pen = new Pen(Color.Cyan, 2f);
             pen.DashStyle = System.Drawing.Drawing2D.DashStyle.Dash;
+
+            Matrix transform = g.Transform;
+
+            g.TranslateTransform(rectangle.X + rectangle.Width / 2, rectangle.Y + rectangle.Height / 2);
+
+            g.RotateTransform(rotationAngle);
+
+            g.TranslateTransform(-(rectangle.X + rectangle.Width / 2), -(rectangle.Y + rectangle.Height / 2));
+
             g.DrawRectangle(pen, rectangle);
 
+            g.Transform = transform;
+
+            // Draw the handles
             foreach (PosSizableRect pos in Enum.GetValues(typeof(PosSizableRect)))
             {
-                using Brush brush = new SolidBrush(Color.White);
-                g.FillRectangle(brush, GetRect(pos));
+                using Brush brush = new SolidBrush(Color.Gray);
+                if (pos == PosSizableRect.RotationHandle)
+                {
+                    g.FillEllipse(brush, GetRect(pos));
+                }
+                else
+                {
+                    g.FillRectangle(brush, GetRect(pos));
+                }
             }
+        }
+
+        public Bitmap RotateImage(Bitmap image, float angle)
+        {
+            Bitmap rotatedImage = new Bitmap(image.Width, image.Height);
+            using (Graphics g = Graphics.FromImage(rotatedImage))
+            {
+                g.TranslateTransform(image.Width / 2, image.Height / 2);
+                g.RotateTransform(angle);
+                g.TranslateTransform(-image.Width / 2, -image.Height / 2);
+                g.DrawImage(image, new Point(0, 0));
+            }
+            return rotatedImage;
         }
 
         public void SetBitmapFile(string filename)
@@ -83,7 +116,6 @@ namespace UkrainianAnalyzer
             {
                 System.Console.WriteLine(exp.Message);
             }
-
         }
 
         private void mPictureBox_MouseDown(object sender, MouseEventArgs e)
@@ -105,6 +137,7 @@ namespace UkrainianAnalyzer
         {
             mIsClick = false;
             mMove = false;
+            SetBitmap(mBmp);
         }
 
         private void mPictureBox_MouseMove(object sender, MouseEventArgs e)
@@ -153,6 +186,21 @@ namespace UkrainianAnalyzer
                 case PosSizableRect.UpMiddle:
                     rectangle.Y += e.Y - oldY;
                     rectangle.Height -= e.Y - oldY;
+                    break;
+
+                case PosSizableRect.RotationHandle:
+                    int maxRotationAngle = 45;
+
+                    float newRotationAngle = rotationAngle + (e.X - oldX) * 0.2f;
+
+                    newRotationAngle = Math.Max(-maxRotationAngle, Math.Min(maxRotationAngle, newRotationAngle));
+
+                    if (newRotationAngle >= -maxRotationAngle && newRotationAngle <= maxRotationAngle)
+                    {
+                        rotationAngle = newRotationAngle;
+                    }
+
+                    oldX = e.X;
                     break;
 
                 default:
@@ -207,60 +255,102 @@ namespace UkrainianAnalyzer
             return new Rectangle(x - sizeNodeRect / 2, y - sizeNodeRect / 2, sizeNodeRect, sizeNodeRect);
         }
 
+        // Update the GetRect method to include the position of the rotation handle
         private Rectangle GetRect(PosSizableRect p)
         {
+            float centerX = rectangle.X + rectangle.Width / 2;
+            float centerY = rectangle.Y + rectangle.Height / 2;
+            float sin = (float)Math.Sin(rotationAngle * Math.PI / 180);
+            float cos = (float)Math.Cos(rotationAngle * Math.PI / 180);
+
             switch (p)
             {
                 case PosSizableRect.LeftUp:
-                    return CreateRectSizableNode(rectangle.X, rectangle.Y);
+                    return RotatePoint(CreateRectSizableNode(rectangle.X, rectangle.Y), centerX, centerY, sin, cos);
 
                 case PosSizableRect.LeftMiddle:
-                    return CreateRectSizableNode(rectangle.X, rectangle.Y + +rectangle.Height / 2);
+                    return RotatePoint(CreateRectSizableNode(rectangle.X, rectangle.Y + rectangle.Height / 2), centerX, centerY, sin, cos);
 
                 case PosSizableRect.LeftBottom:
-                    return CreateRectSizableNode(rectangle.X, rectangle.Y + rectangle.Height);
+                    return RotatePoint(CreateRectSizableNode(rectangle.X, rectangle.Y + rectangle.Height), centerX, centerY, sin, cos);
 
                 case PosSizableRect.BottomMiddle:
-                    return CreateRectSizableNode(rectangle.X + rectangle.Width / 2, rectangle.Y + rectangle.Height);
+                    return RotatePoint(CreateRectSizableNode(rectangle.X + rectangle.Width / 2, rectangle.Y + rectangle.Height), centerX, centerY, sin, cos);
 
                 case PosSizableRect.RightUp:
-                    return CreateRectSizableNode(rectangle.X + rectangle.Width, rectangle.Y);
+                    return RotatePoint(CreateRectSizableNode(rectangle.X + rectangle.Width, rectangle.Y), centerX, centerY, sin, cos);
 
                 case PosSizableRect.RightBottom:
-                    return CreateRectSizableNode(rectangle.X + rectangle.Width, rectangle.Y + rectangle.Height);
+                    return RotatePoint(CreateRectSizableNode(rectangle.X + rectangle.Width, rectangle.Y + rectangle.Height), centerX, centerY, sin, cos);
 
                 case PosSizableRect.RightMiddle:
-                    return CreateRectSizableNode(rectangle.X + rectangle.Width, rectangle.Y + rectangle.Height / 2);
+                    return RotatePoint(CreateRectSizableNode(rectangle.X + rectangle.Width, rectangle.Y + rectangle.Height / 2), centerX, centerY, sin, cos);
 
                 case PosSizableRect.UpMiddle:
-                    return CreateRectSizableNode(rectangle.X + rectangle.Width / 2, rectangle.Y);
+                    return RotatePoint(CreateRectSizableNode(rectangle.X + rectangle.Width / 2, rectangle.Y), centerX, centerY, sin, cos);
+
+                case PosSizableRect.RotationHandle:
+                    Rectangle rotationHandleRect = new Rectangle((int)(centerX - rotationHandleSize / 2), (int)(rectangle.Y - rotationHandleSize - 10), rotationHandleSize, rotationHandleSize);
+            return RotatePoint(rotationHandleRect, centerX, centerY, sin, cos);
                 default:
                     return new Rectangle();
             }
         }
 
-        public PosSizableRect GetNodeSelectable(Point p)
+        private Rectangle RotatePoint(Rectangle rect, float centerX, float centerY, float sin, float cos)
+        {
+            float x = rect.X - centerX;
+            float y = rect.Y - centerY;
+
+            // Rotate the point
+            float rotatedX = x * cos - y * sin;
+            float rotatedY = x * sin + y * cos;
+
+            // Translate the point back to the original position
+            int translatedX = (int)Math.Round(rotatedX + centerX);
+            int translatedY = (int)Math.Round(rotatedY + centerY);
+
+            return new Rectangle(translatedX, translatedY, rect.Width, rect.Height);
+        }
+
+        private PosSizableRect GetNodeSelectable(Point x)
         {
             foreach (PosSizableRect r in Enum.GetValues(typeof(PosSizableRect)))
             {
-                if (GetRect(r).Contains(p))
-                {
+                if (r == PosSizableRect.RotationHandle && GetRect(r).Contains(x))
                     return r;
-                }
+                else if (GetRect(r).Contains(x))
+                    return r;
             }
+
             return PosSizableRect.None;
         }
 
-        public bool IsOverNode(Point p)
+        public bool IsOverNode(Point x)
         {
             foreach (PosSizableRect r in Enum.GetValues(typeof(PosSizableRect)))
             {
-                if (GetRect(r).Contains(p))
-                {
+                if (r == PosSizableRect.RotationHandle && GetRect(r).Contains(x))
                     return true;
-                }
+                else if (GetRect(r).Contains(x))
+                    return true;
             }
-            return false;
+
+            return true;
+        }
+
+        public void Rotate(int mouseX, int mouseY)
+        {
+            int centerX = rectangle.X + rectangle.Width / 2;
+            int centerY = rectangle.Y + rectangle.Height / 2;
+
+            // Calculate the angle between the center of the rectangle and the mouse position
+            double dx = mouseX - centerX;
+            double dy = mouseY - centerY;
+            double angle = Math.Atan2(dy, dx) * 180 / Math.PI;
+
+            rotationAngle = (int)angle;
+            mPictureBox.Invalidate();
         }
 
         private void ChangeCursor(Point p)
@@ -300,10 +390,12 @@ namespace UkrainianAnalyzer
 
                 case PosSizableRect.UpMiddle:
                     return Cursors.SizeNS;
+
+                case PosSizableRect.RotationHandle:
+                    return Cursors.SizeWE;
                 default:
                     return Cursors.Default;
             }
         }
-
     }
 }
