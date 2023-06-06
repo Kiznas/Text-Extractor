@@ -5,6 +5,8 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 using Tesseract;
+using Microsoft.VisualBasic.Devices;
+using System.Reflection.Metadata;
 
 namespace UkrainianAnalyzer
 {
@@ -19,7 +21,7 @@ namespace UkrainianAnalyzer
         private int oldY;
         private int sizeNodeRect = 12;
         private const int rotationHandleSize = 15;
-        private Bitmap mBmp = null;
+        public Bitmap mBmp = null;
         public PosSizableRect nodeSelected = PosSizableRect.None;
         public float rotationAngle = 0;
 
@@ -62,7 +64,7 @@ namespace UkrainianAnalyzer
             // Draw the handles
             foreach (PosSizableRect pos in Enum.GetValues(typeof(PosSizableRect)))
             {
-                using Brush brush = new SolidBrush(Color.Gray);
+                using Brush brush = new SolidBrush(Color.White);
                 if (pos == PosSizableRect.RotationHandle)
                 {
                     g.FillEllipse(brush, GetRect(pos));
@@ -72,19 +74,6 @@ namespace UkrainianAnalyzer
                     g.FillRectangle(brush, GetRect(pos));
                 }
             }
-        }
-
-        public Bitmap RotateImage(Bitmap image, float angle)
-        {
-            Bitmap rotatedImage = new Bitmap(image.Width, image.Height);
-            using (Graphics g = Graphics.FromImage(rotatedImage))
-            {
-                g.TranslateTransform(image.Width / 2, image.Height / 2);
-                g.RotateTransform(angle);
-                g.TranslateTransform(-image.Width / 2, -image.Height / 2);
-                g.DrawImage(image, new Point(0, 0));
-            }
-            return rotatedImage;
         }
 
         public void SetBitmapFile(string filename)
@@ -137,7 +126,7 @@ namespace UkrainianAnalyzer
         {
             mIsClick = false;
             mMove = false;
-            SetBitmap(mBmp);
+            //SetBitmap(mBmp);
         }
 
         private void mPictureBox_MouseMove(object sender, MouseEventArgs e)
@@ -255,7 +244,6 @@ namespace UkrainianAnalyzer
             return new Rectangle(x - sizeNodeRect / 2, y - sizeNodeRect / 2, sizeNodeRect, sizeNodeRect);
         }
 
-        // Update the GetRect method to include the position of the rotation handle
         private Rectangle GetRect(PosSizableRect p)
         {
             float centerX = rectangle.X + rectangle.Width / 2;
@@ -338,21 +326,6 @@ namespace UkrainianAnalyzer
 
             return true;
         }
-
-        public void Rotate(int mouseX, int mouseY)
-        {
-            int centerX = rectangle.X + rectangle.Width / 2;
-            int centerY = rectangle.Y + rectangle.Height / 2;
-
-            // Calculate the angle between the center of the rectangle and the mouse position
-            double dx = mouseX - centerX;
-            double dy = mouseY - centerY;
-            double angle = Math.Atan2(dy, dx) * 180 / Math.PI;
-
-            rotationAngle = (int)angle;
-            mPictureBox.Invalidate();
-        }
-
         private void ChangeCursor(Point p)
         {
             mPictureBox.Cursor = GetCursor(GetNodeSelectable(p));

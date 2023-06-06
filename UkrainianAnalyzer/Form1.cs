@@ -1,30 +1,30 @@
 using Tesseract;
+using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
-using System.Net.Http.Headers;
-using System.IO;
 using System.Text.RegularExpressions;
 using System.Drawing;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.TextBox;
-using System.Drawing.Drawing2D;
-using System.Drawing.Imaging;
 using System.Windows.Forms;
-using static System.Windows.Forms.DataFormats;
-using System;
 
 namespace UkrainianAnalyzer
 {
     public partial class Form1 : Form
     {
+        private Point startPoint;
+        private Bitmap capturedImage;
+        private Bitmap overlayImage;
+        private SettingsForm settings;
+        private Rectangle selectedArea;
         private TesseractEngine ocrEngine;
+
+        private bool hotkeyPressed;
+        private bool textMode = true;
         private bool isSelecting = false;
         private bool rectangleExist = false;
-        private Rectangle selectedArea;
-        private Bitmap capturedImage;
-        private Point startPoint;
-        private bool hotkeyPressed;
-        private SettingsForm settings;
 
-        UserRect rect;
+        private ToolStripMenuItem positionXItem;
+        private ToolStripMenuItem positionYItem;
+
+        private UserRect rect;
 
         public Form1()
         {
@@ -38,12 +38,26 @@ namespace UkrainianAnalyzer
 
             notifyIcon1.ContextMenuStrip = new ContextMenuStrip();
 
+            ToolStripMenuItem switchItem = new ToolStripMenuItem("Mode");
+
+            positionXItem = new ToolStripMenuItem("TextMode");
+            positionXItem.Click += PositionXItem_Click;
+            switchItem.DropDownItems.Add(positionXItem);
+
+            positionYItem = new ToolStripMenuItem("ScreenshotMode");
+            positionYItem.Click += PositionYItem_Click;
+            switchItem.DropDownItems.Add(positionYItem);
+
             notifyIcon1.ContextMenuStrip.Items.AddRange(new ToolStripItem[]
             {
-                new ToolStripMenuItem("SETTINGS", null, new EventHandler(Settings), "SETTINGS"),
-                new ToolStripMenuItem("EXIT", null, new EventHandler(Exit), "EXIT")
+                switchItem,
+                new ToolStripMenuItem("SETTINGS", null, new EventHandler(Settings)),
+                new ToolStripMenuItem("EXIT", null, new EventHandler(Exit))
             });
+
+            positionXItem.Checked = true;
         }
+
         private void pictureBoxMainPaint(object sender, PaintEventArgs e)
         {
             if (!rectangleExist)
@@ -52,6 +66,29 @@ namespace UkrainianAnalyzer
                 {
                     pen.DashStyle = System.Drawing.Drawing2D.DashStyle.Dash;
                     e.Graphics.DrawRectangle(pen, selectedArea);
+                }
+            }
+
+            if(capturedImage != null)
+            {
+                e.Graphics.DrawImage(capturedImage, 0, 0);
+
+                if (!rectangleExist)
+                {
+                    using (Pen pen = new Pen(Color.Cyan, 2))
+                    {
+                        pen.DashStyle = System.Drawing.Drawing2D.DashStyle.Dash;
+                        e.Graphics.DrawRectangle(pen, selectedArea);
+                    }
+                }
+
+                using (TextureBrush brush = new TextureBrush(overlayImage))
+                {
+                    brush.TranslateTransform(0, 0);
+                    brush.WrapMode = System.Drawing.Drawing2D.WrapMode.Tile;
+                    Region region = new Region(new RectangleF(0, 0, overlayImage.Width, overlayImage.Height));
+                    region.Exclude(selectedArea);
+                    e.Graphics.FillRegion(brush, region);
                 }
             }
         }
@@ -64,6 +101,7 @@ namespace UkrainianAnalyzer
                 rect.SetPictureBox(this.pictureBoxMain);
                 pictureBoxMain.Invalidate();
                 rectangleExist = true;
+                isSelecting = false;
             }
         }
 
@@ -72,6 +110,7 @@ namespace UkrainianAnalyzer
             if (rectangleExist)
             {
                 isSelecting = false;
+                selectedArea = rect.rectangle;
             }
             else if (e.Button == MouseButtons.Left)
             {
@@ -86,7 +125,6 @@ namespace UkrainianAnalyzer
             {
                 Point currentPoint = e.Location;
 
-                // Calculate the selected area
                 int x = Math.Min(startPoint.X, currentPoint.X);
                 int y = Math.Min(startPoint.Y, currentPoint.Y);
                 int width = Math.Abs(startPoint.X - currentPoint.X);
@@ -98,6 +136,7 @@ namespace UkrainianAnalyzer
             else if (rect != null && rect.IsOverNode(e.Location))
             {
                 isSelecting = false;
+                selectedArea = rect.rectangle;
             }
         }
 
@@ -107,7 +146,6 @@ namespace UkrainianAnalyzer
             {
                 isSelecting = false;
                 hotkeyPressed = false;
-
 
                 GraphicsPath path = new GraphicsPath();
                 path.AddRectangle(rect.rectangle);
@@ -123,9 +161,9 @@ namespace UkrainianAnalyzer
 
                 using (Graphics graphics = Graphics.FromImage(rotatedImage))
                 {
-                    graphics.TranslateTransform(rotatedImage.Width / 2, rotatedImage.Height / 2);
+                    graphics.TranslateTransform(rotatedRect.Width / 2, rotatedRect.Height / 2);
                     graphics.RotateTransform(-rect.rotationAngle);
-                    graphics.TranslateTransform(-rotatedImage.Width / 2, -rotatedImage.Height / 2);
+                    graphics.TranslateTransform(-rotatedRect.Width / 2, -rotatedRect.Height / 2);
                     graphics.DrawImage(pictureBoxMain.Image, 0, 0, rotatedRect, GraphicsUnit.Pixel);
                 }
 
@@ -142,10 +180,15 @@ namespace UkrainianAnalyzer
 
                     extractedText = RemoveEmptyLines(extractedText);
 
-                    if (extractedText.Length > 0)
+                    if (textMode) 
                     {
-                        Clipboard.SetText(extractedText);
+                        if (extractedText.Length > 0) 
+                        {
+                            Clipboard.SetText(extractedText); 
+                        } 
                     }
+                    else { Clipboard.SetImage(rotatedImage); }
+
                     this.FormBorderStyle = FormBorderStyle.Sizable;
                     this.WindowState = FormWindowState.Minimized;
                 }
@@ -153,9 +196,12 @@ namespace UkrainianAnalyzer
                 rectangleExist = false;
                 selectedArea = Rectangle.Empty;
                 rect.rectangle = Rectangle.Empty;
-                rect = null;
 
                 pictureBoxMain.Refresh();
+
+                capturedImage?.Dispose();
+                rotatedImage.Dispose();
+                pixImage.Dispose();
             }
         }
         private string RemoveEmptyLines(string lines)
@@ -168,9 +214,23 @@ namespace UkrainianAnalyzer
             Point cursorPosition = Cursor.Position;
             Screen screen = Screen.FromPoint(cursorPosition);
             Rectangle screenBounds = screen.Bounds;
+            this.Location = screen.Bounds.Location;
 
             int screenWidth = screenBounds.Width;
             int screenHeight = screenBounds.Height;
+
+            capturedImage = new Bitmap(screenWidth, screenHeight);
+            using (Graphics graphics = Graphics.FromImage(capturedImage))
+            {
+                graphics.CopyFromScreen(screenBounds.Left, screenBounds.Top, 0, 0, capturedImage.Size);
+            }
+
+            this.WindowState = FormWindowState.Normal;
+            this.FormBorderStyle = FormBorderStyle.None;
+
+            pictureBoxMain.Image?.Dispose();
+
+            this.WindowState = FormWindowState.Maximized;
 
             double widthRatio = (double)pictureBoxMain.Width / screenWidth;
             double heightRatio = (double)pictureBoxMain.Height / screenHeight;
@@ -180,17 +240,13 @@ namespace UkrainianAnalyzer
             int newWidth = (int)(screenWidth * scaleFactor);
             int newHeight = (int)(screenHeight * scaleFactor);
 
-            capturedImage = new Bitmap(screenWidth, screenHeight);
-            using (Graphics graphics = Graphics.FromImage(capturedImage))
-            {
-                graphics.CopyFromScreen(screenBounds.Left, screenBounds.Top, 0, 0, capturedImage.Size);
-            }
-
-            pictureBoxMain.Image?.Dispose();
-
             pictureBoxMain.Image = new Bitmap(capturedImage, newWidth, newHeight);
 
-            //Clipboard.SetImage(capturedImage);
+            overlayImage = new Bitmap(capturedImage.Width, capturedImage.Height);
+            using (Graphics g = Graphics.FromImage(overlayImage))
+            {
+                g.Clear(Color.FromArgb(128, Color.Black));
+            }
         }
             
 
@@ -213,18 +269,8 @@ namespace UkrainianAnalyzer
 
                     Show();
 
-                    this.notifyIcon1.Visible = false;
-
-                    this.WindowState = FormWindowState.Normal;
-                    this.FormBorderStyle = FormBorderStyle.None;
-                    this.Location = MousePosition;
-
-                    this.WindowState = FormWindowState.Maximized;
-                    this.TopMost = true;
-
-                    hotkeyPressed = true;
-
                     CaptureScreenshot();
+                    hotkeyPressed = true;
                 }
             }
         }
@@ -232,6 +278,10 @@ namespace UkrainianAnalyzer
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
             UnregisterHotKey(this.Handle, 0);
+            notifyIcon1.Visible = false;
+                this.WindowState = FormWindowState.Normal;
+                this.Show();
+            
         }
 
         public enum KeyModifier
@@ -270,6 +320,19 @@ namespace UkrainianAnalyzer
 
         }
 
+        private void PositionXItem_Click(object? sender, EventArgs e)
+        {
+            positionXItem.Checked = true;
+            positionYItem.Checked = false;
+            textMode = true;
+        }
+        private void PositionYItem_Click(object? sender, EventArgs e)
+        {
+            positionXItem.Checked = false;
+            positionYItem.Checked = true;
+            textMode = false;
+        }
+
         private void Settings(object? sender, EventArgs e)
         {
             settings.Show();
@@ -280,6 +343,5 @@ namespace UkrainianAnalyzer
         {
             Application.Exit();
         }
-
     }
 }
