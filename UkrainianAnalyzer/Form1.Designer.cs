@@ -52,7 +52,7 @@
             this.pictureBoxMain.Dock = System.Windows.Forms.DockStyle.Fill;
             this.pictureBoxMain.Location = new System.Drawing.Point(0, 0);
             this.pictureBoxMain.Name = "pictureBoxMain";
-            this.pictureBoxMain.Size = new System.Drawing.Size(910, 591);
+            this.pictureBoxMain.Size = new System.Drawing.Size(445, 248);
             this.pictureBoxMain.SizeMode = System.Windows.Forms.PictureBoxSizeMode.CenterImage;
             this.pictureBoxMain.TabIndex = 9;
             this.pictureBoxMain.TabStop = false;
@@ -71,17 +71,18 @@
             // 
             // checkedListBox1
             // 
-            this.checkedListBox1.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.checkedListBox1.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.checkedListBox1.CheckOnClick = true;
+            this.checkedListBox1.Dock = System.Windows.Forms.DockStyle.Fill;
             this.checkedListBox1.Font = new System.Drawing.Font("Segoe UI", 45F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
             this.checkedListBox1.FormattingEnabled = true;
             this.checkedListBox1.Items.AddRange(new object[] {
             "eng",
             "rus",
             "ukr"});
-            this.checkedListBox1.Location = new System.Drawing.Point(65, 161);
+            this.checkedListBox1.Location = new System.Drawing.Point(0, 0);
             this.checkedListBox1.Name = "checkedListBox1";
-            this.checkedListBox1.Size = new System.Drawing.Size(751, 250);
+            this.checkedListBox1.Size = new System.Drawing.Size(445, 248);
             this.checkedListBox1.Sorted = true;
             this.checkedListBox1.TabIndex = 10;
             this.checkedListBox1.SelectedIndexChanged += new System.EventHandler(this.checkedListBox1_SelectedIndexChanged);
@@ -91,13 +92,14 @@
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.SystemColors.MenuBar;
-            this.ClientSize = new System.Drawing.Size(910, 591);
+            this.ClientSize = new System.Drawing.Size(445, 248);
             this.Controls.Add(this.checkedListBox1);
             this.Controls.Add(this.pictureBoxMain);
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
             this.KeyPreview = true;
             this.Name = "Form1";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "Form1";
+            this.Text = "Text Extractor ( Choose language )";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Form1_FormClosing);
             this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.Form1_KeyDown);
             this.Resize += new System.EventHandler(this.Form1_Resize);

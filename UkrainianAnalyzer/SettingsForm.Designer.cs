@@ -106,10 +106,11 @@
             this.Controls.Add(this.RegularButtonTxt);
             this.Controls.Add(this.SpecialButtonTxt);
             this.Controls.Add(this.checkedListBox1);
-            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.Fixed3D;
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
             this.Name = "SettingsForm";
             this.Text = "SettingsForm";
             this.WindowState = System.Windows.Forms.FormWindowState.Minimized;
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.SettingsForm_FormClosing);
             this.ResumeLayout(false);
             this.PerformLayout();
 

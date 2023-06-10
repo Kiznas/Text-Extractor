@@ -55,5 +55,11 @@ namespace UkrainianAnalyzer
             StringChanged?.Invoke(checkedListBox1.Text);
             Hide();
         }
+
+        private void SettingsForm_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            e.Cancel = true; //don’t close
+            Hide();
+        }
     }
 }

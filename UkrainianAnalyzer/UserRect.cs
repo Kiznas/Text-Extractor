@@ -14,16 +14,19 @@ namespace UkrainianAnalyzer
     {
         private PictureBox mPictureBox;
         public Rectangle rectangle;
+        public Rectangle selectedArea;
         public bool allowDeformingDuringMovement = false;
         private bool mIsClick = false;
         private bool mMove = false;
         private int oldX;
         private int oldY;
-        private int sizeNodeRect = 12;
+        private int sizeNodeRect = 10;
         private const int rotationHandleSize = 15;
         public Bitmap mBmp = null;
         public PosSizableRect nodeSelected = PosSizableRect.None;
         public float rotationAngle = 0;
+
+        private Form1 form1;
 
         public enum PosSizableRect
         {
@@ -47,7 +50,7 @@ namespace UkrainianAnalyzer
         public void Draw(Graphics g)
         {
             Pen pen = new Pen(Color.Cyan, 2f);
-            pen.DashStyle = System.Drawing.Drawing2D.DashStyle.Dash;
+            pen.DashStyle = DashStyle.Dash;
 
             Matrix transform = g.Transform;
 
@@ -61,34 +64,33 @@ namespace UkrainianAnalyzer
 
             g.Transform = transform;
 
-            // Draw the handles
             foreach (PosSizableRect pos in Enum.GetValues(typeof(PosSizableRect)))
             {
-                using Brush brush = new SolidBrush(Color.White);
+                using Brush brush = new SolidBrush(Color.Cyan);
                 if (pos == PosSizableRect.RotationHandle)
                 {
                     g.FillEllipse(brush, GetRect(pos));
+                    Rectangle handleRect = GetRect(pos);
+                    int smallRectSize = 10;
+                    int smallRectX = handleRect.X + handleRect.Width / 2 - smallRectSize / 2;
+                    int smallRectY = handleRect.Y + handleRect.Height / 2 - smallRectSize / 2;
+                    g.FillEllipse(Brushes.Black, smallRectX, smallRectY, smallRectSize, smallRectSize);
                 }
                 else
                 {
                     g.FillRectangle(brush, GetRect(pos));
+                    Rectangle handleRect = GetRect(pos);
+                    int smallRectSize = 6;
+                    int smallRectX = handleRect.X + handleRect.Width / 2 - smallRectSize / 2;
+                    int smallRectY = handleRect.Y + handleRect.Height / 2 - smallRectSize / 2;
+                    g.FillRectangle(Brushes.Black, smallRectX, smallRectY, smallRectSize, smallRectSize);
                 }
             }
         }
-
-        public void SetBitmapFile(string filename)
-        {
-            this.mBmp = new Bitmap(filename);
-        }
-
-        public void SetBitmap(Bitmap bmp)
-        {
-            this.mBmp = bmp;
-        }
-
-        public void SetPictureBox(PictureBox p)
+        public void SetPictureBox(PictureBox p, Form1 form)
         {
             this.mPictureBox = p;
+            form1 = form;
             mPictureBox.MouseDown += new MouseEventHandler(mPictureBox_MouseDown);
             mPictureBox.MouseUp += new MouseEventHandler(mPictureBox_MouseUp);
             mPictureBox.MouseMove += new MouseEventHandler(mPictureBox_MouseMove);
@@ -126,7 +128,6 @@ namespace UkrainianAnalyzer
         {
             mIsClick = false;
             mMove = false;
-            //SetBitmap(mBmp);
         }
 
         private void mPictureBox_MouseMove(object sender, MouseEventArgs e)
