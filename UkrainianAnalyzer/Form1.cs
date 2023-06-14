@@ -2,9 +2,6 @@ using Tesseract;
 using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
-using System.Drawing;
-using System.Windows.Forms;
-using static System.Windows.Forms.DataFormats;
 
 namespace UkrainianAnalyzer
 {
@@ -25,17 +22,30 @@ namespace UkrainianAnalyzer
         private ToolStripMenuItem positionXItem;
         private ToolStripMenuItem positionYItem;
 
+        private Color mainColor;
+        private Color fillColor;
+
+        private int regularKey;
+        private int specialKey;
+
         private UserRect rect;
 
         public Form1()
         {
             InitializeComponent();
 
+            specialKey = 1; // ALT
+            regularKey = 65; // A
+
             int id = 0;
-            RegisterHotKey(this.Handle, id, (int)KeyModifier.Shift, Keys.A.GetHashCode());
+            RegisterHotKey(this.Handle, id, specialKey, regularKey);
 
             settings = new SettingsForm();
             settings.StringChanged += ChangeOCRLanguage;
+            settings.MainColorChanged += MainColorChanged;
+            settings.FillColorChanged += FillColorChanged;
+            settings.RegularKeyChanged += RegularKeyChanged;
+            settings.SpecialKeyChanged += SpecialKeyChanged;
 
             notifyIcon1.ContextMenuStrip = new ContextMenuStrip();
 
@@ -57,13 +67,17 @@ namespace UkrainianAnalyzer
             });
 
             positionXItem.Checked = true;
-        }
 
+            mainColor = Color.Cyan;
+            fillColor = Color.Black;
+
+            this.AutoScaleMode= AutoScaleMode.Dpi;
+        }
         private void pictureBoxMainPaint(object sender, PaintEventArgs e)
         {
             if (!rectangleExist)
             {
-                using (Pen pen = new Pen(Color.Cyan, 2))
+                using (Pen pen = new Pen(mainColor, 2))
                 {
                     pen.DashStyle = DashStyle.Dash;
                     e.Graphics.DrawRectangle(pen, selectedArea);
@@ -76,35 +90,53 @@ namespace UkrainianAnalyzer
                 {
                     rect.Draw(e.Graphics);
                     e.Graphics.DrawImage(capturedImage, 0, 0);
+
+                    using (TextureBrush brush = new TextureBrush(overlayImage))
+                    {
+                        brush.TranslateTransform(0, 0);
+                        brush.WrapMode = WrapMode.Tile;
+                        PointF[] points = rect.GetPoints();
+                        GraphicsPath graphicsPath = new GraphicsPath();
+                        graphicsPath.AddPolygon(points);
+                        Region region = new Region(new RectangleF(0, 0, overlayImage.Width, overlayImage.Height));
+                        region.Exclude(graphicsPath);
+                        e.Graphics.FillRegion(brush, region);
+
+                    }
                 }
-                if (!rectangleExist)
+                else
                 {
-                    using (Pen pen = new Pen(Color.Cyan, 2))
+                    using (Pen pen = new Pen(mainColor, 2))
                     {
                         pen.DashStyle = DashStyle.Dash;
                         e.Graphics.DrawRectangle(pen, selectedArea);
                     }
-                }
-
-                using (TextureBrush brush = new TextureBrush(overlayImage))
-                {
-                    brush.TranslateTransform(0, 0);
-                    brush.WrapMode = WrapMode.Tile;
-                    Region region = new Region(new RectangleF(0, 0, overlayImage.Width, overlayImage.Height));
-                    region.Exclude(selectedArea);
-                    e.Graphics.FillRegion(brush, region);
+                    using (TextureBrush brush = new TextureBrush(overlayImage))
+                    {
+                        brush.TranslateTransform(0, 0);
+                        brush.WrapMode = WrapMode.Tile;
+                        Region region = new Region(new RectangleF(0, 0, overlayImage.Width, overlayImage.Height));
+                        region.Exclude(selectedArea);
+                        e.Graphics.FillRegion(brush, region);
+                    }
                 }
             }
         }
 
         private void pictureBoxMain_Up(object sender, MouseEventArgs e)
         {
-            if (!rectangleExist)
+            if (!rectangleExist && selectedArea.Width >= 5 && selectedArea.Height >= 5)
             {
                 rect = new UserRect(selectedArea);
-                rect.SetPictureBox(this.pictureBoxMain, this);
+                rect.SetPictureBox(this.pictureBoxMain, mainColor, fillColor);
+                rect.SelectionApproved += UseOCRorScreenshot;
                 pictureBoxMain.Invalidate();
                 rectangleExist = true;
+                isSelecting = false;
+            }
+            else
+            {
+                selectedArea = Rectangle.Empty;
                 isSelecting = false;
             }
         }
@@ -148,61 +180,7 @@ namespace UkrainianAnalyzer
         {
             if (e.KeyCode == Keys.Enter)
             {
-                isSelecting = false;
-                hotkeyPressed = false;
-
-                Bitmap rotatedImage = new Bitmap((int) capturedImage.Width, (int)capturedImage.Height);
-
-                using (Graphics graphics = Graphics.FromImage(rotatedImage))
-                {
-                    graphics.TranslateTransform(capturedImage.Width / 2, capturedImage.Height / 2);
-                    graphics.RotateTransform(-rect.rotationAngle);
-                    graphics.TranslateTransform(-capturedImage.Width / 2, -capturedImage.Height / 2);
-                    graphics.DrawImage(pictureBoxMain.Image, 0, 0);
-                }
-
-                Bitmap croppedBitmap = new Bitmap(selectedArea.Width, selectedArea.Height);
-
-                using (Graphics graphics = Graphics.FromImage(croppedBitmap))
-                {
-                    graphics.DrawImage(rotatedImage, 0,0, selectedArea, GraphicsUnit.Pixel);
-                }
-
-                string tempImagePath = Path.GetTempFileName();
-                croppedBitmap.Save(tempImagePath, System.Drawing.Imaging.ImageFormat.MemoryBmp);
-
-                Pix pixImage = Pix.LoadFromFile(tempImagePath);
-
-                File.Delete(tempImagePath);
-
-                using (var page = ocrEngine.Process(pixImage))
-                {
-                    string extractedText = page.GetText();
-
-                    extractedText = RemoveEmptyLines(extractedText);
-
-                    if (textMode)
-                    {
-                        if (extractedText.Length > 0)
-                        {
-                            Clipboard.SetText(extractedText);
-                        }
-                    }
-                    else { Clipboard.SetImage(croppedBitmap); }
-
-                    this.FormBorderStyle = FormBorderStyle.Sizable;
-                    this.WindowState = FormWindowState.Minimized;
-                }
-
-                rectangleExist = false;
-                selectedArea = Rectangle.Empty;
-                rect.rectangle = Rectangle.Empty;
-
-                pictureBoxMain.Refresh();
-
-                capturedImage?.Dispose();
-                rotatedImage.Dispose();
-                pixImage.Dispose();
+                UseOCRorScreenshot();
             }
             if (e.KeyCode == Keys.Escape)
             {
@@ -220,6 +198,66 @@ namespace UkrainianAnalyzer
                 this.WindowState = FormWindowState.Minimized;
             }
         }
+
+        private void UseOCRorScreenshot()
+        {
+            isSelecting = false;
+            hotkeyPressed = false;
+
+            Bitmap rotatedImage = new Bitmap((int)capturedImage.Width, (int)capturedImage.Height);
+
+            using (Graphics graphics = Graphics.FromImage(rotatedImage))
+            {
+                graphics.TranslateTransform(capturedImage.Width / 2, capturedImage.Height / 2);
+                graphics.RotateTransform(-rect.rotationAngle);
+                graphics.TranslateTransform(-capturedImage.Width / 2, -capturedImage.Height / 2);
+                graphics.DrawImage(pictureBoxMain.Image, 0, 0);
+            }
+
+            Bitmap croppedBitmap = new Bitmap(selectedArea.Width, selectedArea.Height);
+
+            using (Graphics graphics = Graphics.FromImage(croppedBitmap))
+            {
+                graphics.DrawImage(rotatedImage, 0, 0, selectedArea, GraphicsUnit.Pixel);
+            }
+
+            string tempImagePath = Path.GetTempFileName();
+            croppedBitmap.Save(tempImagePath, System.Drawing.Imaging.ImageFormat.MemoryBmp);
+
+            Pix pixImage = Pix.LoadFromFile(tempImagePath);
+
+            File.Delete(tempImagePath);
+
+            using (var page = ocrEngine.Process(pixImage))
+            {
+                string extractedText = page.GetText();
+
+                extractedText = RemoveEmptyLines(extractedText);
+
+                if (textMode)
+                {
+                    if (extractedText.Length > 0)
+                    {
+                        Clipboard.SetText(extractedText);
+                    }
+                }
+                else { Clipboard.SetImage(croppedBitmap); }
+
+                this.FormBorderStyle = FormBorderStyle.Sizable;
+                this.WindowState = FormWindowState.Minimized;
+            }
+
+            rectangleExist = false;
+            selectedArea = Rectangle.Empty;
+            rect.Dispose();
+
+            pictureBoxMain.Refresh();
+
+            capturedImage?.Dispose();
+            rotatedImage.Dispose();
+            croppedBitmap.Dispose();
+            pixImage.Dispose();
+        }
         
         private string RemoveEmptyLines(string lines)
         {
@@ -230,16 +268,16 @@ namespace UkrainianAnalyzer
         {
             Point cursorPosition = Cursor.Position;
             Screen screen = Screen.FromPoint(cursorPosition);
-            Rectangle screenBounds = screen.Bounds;
+            Rectangle workingArea = screen.WorkingArea;
             this.Location = screen.Bounds.Location;
 
-            int screenWidth = screenBounds.Width;
-            int screenHeight = screenBounds.Height;
+            int screenWidth = workingArea.Width;
+            int screenHeight = workingArea.Height;
 
             capturedImage = new Bitmap(screenWidth, screenHeight);
             using (Graphics graphics = Graphics.FromImage(capturedImage))
             {
-                graphics.CopyFromScreen(screenBounds.Left, screenBounds.Top, 0, 0, capturedImage.Size);
+                graphics.CopyFromScreen(workingArea.Left, workingArea.Top, 0, 0, capturedImage.Size);
             }
 
             this.WindowState = FormWindowState.Normal;
@@ -323,6 +361,28 @@ namespace UkrainianAnalyzer
             ocrEngine = new TesseractEngine("./tessdata", lang, EngineMode.Default);
             ocrEngine.SetVariable("tessedit_pageseg_mode", "9");
             ocrEngine.SetVariable("textord_min_linesize", "1");
+        }
+
+        private void MainColorChanged(Color color)
+        {
+            mainColor = color;
+        }
+        private void FillColorChanged(Color color)
+        {
+            fillColor = color;
+        }
+        private void SpecialKeyChanged(int newSpecialHotkey)
+        {
+            specialKey = newSpecialHotkey;
+            UnregisterHotKey(this.Handle, 0);
+            RegisterHotKey(this.Handle, 0, specialKey, regularKey);
+        }
+
+        private void RegularKeyChanged(int newRegularHotkey)
+        {
+            regularKey = newRegularHotkey;
+            UnregisterHotKey(this.Handle, 0);
+            RegisterHotKey(this.Handle, 0, specialKey, regularKey);
         }
 
         private void Form1_Resize(object sender, EventArgs e)

@@ -1,12 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Drawing;
+﻿using System.Drawing;
 using System.Drawing.Drawing2D;
-using System.Windows.Forms;
-using Tesseract;
-using Microsoft.VisualBasic.Devices;
-using System.Reflection.Metadata;
 
 namespace UkrainianAnalyzer
 {
@@ -26,7 +19,12 @@ namespace UkrainianAnalyzer
         public PosSizableRect nodeSelected = PosSizableRect.None;
         public float rotationAngle = 0;
 
-        private Form1 form1;
+        public event Action SelectionApproved;
+
+        private Icon icon;
+
+        private Color mainColor;
+        private Color fillColor;
 
         public enum PosSizableRect
         {
@@ -39,6 +37,7 @@ namespace UkrainianAnalyzer
             RightBottom,
             BottomMiddle,
             RotationHandle,
+            RightBottomHandleButton,
             None
         };
 
@@ -46,35 +45,28 @@ namespace UkrainianAnalyzer
         {
             rectangle = r;
             mIsClick = false;
+            mainColor = Color.Cyan;
+            fillColor = Color.Black;
+            icon = new Icon("check.ico");
         }
         public void Draw(Graphics g)
         {
-            Pen pen = new Pen(Color.Cyan, 2f);
+            Pen pen = new Pen(mainColor, 2f);
             pen.DashStyle = DashStyle.Dash;
 
-            Matrix transform = g.Transform;
-
-            g.TranslateTransform(rectangle.X + rectangle.Width / 2, rectangle.Y + rectangle.Height / 2);
-
-            g.RotateTransform(rotationAngle);
-
-            g.TranslateTransform(-(rectangle.X + rectangle.Width / 2), -(rectangle.Y + rectangle.Height / 2));
-
-            g.DrawRectangle(pen, rectangle);
-
-            g.Transform = transform;
+            PointF[] points = GetPoints();
+            g.DrawPolygon(pen, points);
 
             foreach (PosSizableRect pos in Enum.GetValues(typeof(PosSizableRect)))
             {
-                using Brush brush = new SolidBrush(Color.Cyan);
+                using Brush brush = new SolidBrush(mainColor);
                 if (pos == PosSizableRect.RotationHandle)
                 {
                     g.FillEllipse(brush, GetRect(pos));
-                    Rectangle handleRect = GetRect(pos);
-                    int smallRectSize = 10;
-                    int smallRectX = handleRect.X + handleRect.Width / 2 - smallRectSize / 2;
-                    int smallRectY = handleRect.Y + handleRect.Height / 2 - smallRectSize / 2;
-                    g.FillEllipse(Brushes.Black, smallRectX, smallRectY, smallRectSize, smallRectSize);
+                }
+                else if (pos == PosSizableRect.RightBottomHandleButton)
+                {
+                    g.DrawIcon(icon, GetRect(pos));
                 }
                 else
                 {
@@ -83,20 +75,21 @@ namespace UkrainianAnalyzer
                     int smallRectSize = 6;
                     int smallRectX = handleRect.X + handleRect.Width / 2 - smallRectSize / 2;
                     int smallRectY = handleRect.Y + handleRect.Height / 2 - smallRectSize / 2;
-                    g.FillRectangle(Brushes.Black, smallRectX, smallRectY, smallRectSize, smallRectSize);
+                    Brush fillColorBrush = new SolidBrush(fillColor);
+                    g.FillRectangle(fillColorBrush, smallRectX, smallRectY, smallRectSize, smallRectSize);
                 }
             }
         }
-        public void SetPictureBox(PictureBox p, Form1 form)
+        public void SetPictureBox(PictureBox p, Color mainColorExternal, Color fillColorExternal)
         {
+            mainColor = mainColorExternal;
+            fillColor = fillColorExternal;
             this.mPictureBox = p;
-            form1 = form;
             mPictureBox.MouseDown += new MouseEventHandler(mPictureBox_MouseDown);
             mPictureBox.MouseUp += new MouseEventHandler(mPictureBox_MouseUp);
             mPictureBox.MouseMove += new MouseEventHandler(mPictureBox_MouseMove);
             mPictureBox.Paint += new PaintEventHandler(mPictureBox_Paint);
         }
-
         private void mPictureBox_Paint(object sender, PaintEventArgs e)
         {
             try
@@ -115,6 +108,11 @@ namespace UkrainianAnalyzer
 
             nodeSelected = PosSizableRect.None;
             nodeSelected = GetNodeSelectable(e.Location);
+
+            if(nodeSelected == PosSizableRect.RightBottomHandleButton)
+            {
+                SelectionApproved.Invoke();
+            }
 
             if (rectangle.Contains(new Point(e.X, e.Y)))
             {
@@ -245,6 +243,24 @@ namespace UkrainianAnalyzer
             return new Rectangle(x - sizeNodeRect / 2, y - sizeNodeRect / 2, sizeNodeRect, sizeNodeRect);
         }
 
+        public PointF[] GetPoints()
+        {
+            int i = 0;
+            PointF[] points = new PointF[4];
+            foreach (PosSizableRect pos in Enum.GetValues(typeof(PosSizableRect)))
+            {
+                if(pos == PosSizableRect.LeftUp ||
+                    pos == PosSizableRect.RightUp ||
+                    pos == PosSizableRect.LeftBottom ||
+                    pos == PosSizableRect.RightBottom)
+                {
+                    points[i] = (new PointF(GetRect(pos).Left + GetRect(pos).Width / 2, GetRect(pos).Top + GetRect(pos).Height / 2));
+                    i++;
+                }
+            }
+
+            return points;
+        }
         private Rectangle GetRect(PosSizableRect p)
         {
             float centerX = rectangle.X + rectangle.Width / 2;
@@ -281,6 +297,15 @@ namespace UkrainianAnalyzer
                 case PosSizableRect.RotationHandle:
                     Rectangle rotationHandleRect = new Rectangle((int)(centerX - rotationHandleSize / 2), (int)(rectangle.Y - rotationHandleSize - 10), rotationHandleSize, rotationHandleSize);
             return RotatePoint(rotationHandleRect, centerX, centerY, sin, cos);
+
+                case PosSizableRect.RightBottomHandleButton:
+                    int buttonX = (int)(rectangle.X + rectangle.Width + 2); 
+                    int buttonY = (int)(rectangle.Y + rectangle.Height + 2); 
+                    int buttonWidth = 30; 
+                    int buttonHeight = 30; 
+                    Rectangle button = new Rectangle(buttonX, buttonY, buttonWidth, buttonHeight);
+                    return RotatePoint(button, centerX, centerY, sin, cos);
+
                 default:
                     return new Rectangle();
             }
@@ -313,6 +338,27 @@ namespace UkrainianAnalyzer
             }
 
             return PosSizableRect.None;
+        }
+
+        public void Dispose()
+        {
+            if (mPictureBox != null)
+            {
+                mPictureBox.MouseDown -= mPictureBox_MouseDown;
+                mPictureBox.MouseUp -= mPictureBox_MouseUp;
+                mPictureBox.MouseMove -= mPictureBox_MouseMove;
+                mPictureBox.Paint -= mPictureBox_Paint;
+                mPictureBox = null;
+            }
+            // Dispose any other disposable resources here, if applicable.
+
+            // Set other fields to null or default values.
+            rectangle = Rectangle.Empty;
+            selectedArea = Rectangle.Empty;
+            mBmp?.Dispose();
+            mBmp = null;
+            icon?.Dispose();
+            icon = null;
         }
 
         public bool IsOverNode(Point x)
@@ -367,6 +413,9 @@ namespace UkrainianAnalyzer
 
                 case PosSizableRect.RotationHandle:
                     return Cursors.SizeWE;
+
+                case PosSizableRect.RightBottomHandleButton:
+                    return Cursors.Hand;
                 default:
                     return Cursors.Default;
             }

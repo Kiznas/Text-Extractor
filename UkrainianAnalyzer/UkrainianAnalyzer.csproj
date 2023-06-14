@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationManifest>bin\Debug\net6.0-windows\tessdata\app.manifest</ApplicationManifest>
   </PropertyGroup>
 
   <ItemGroup>
