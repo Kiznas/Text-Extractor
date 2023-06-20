@@ -15,13 +15,19 @@
     {
         "Entry"
         {
+        "MsmKey" = "8:_253886C6DEDF41038D0CEED9996D1679"
+        "OwnerKey" = "8:_UNDEFINED"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
         "MsmKey" = "8:_419B38AF8F194D7CAF939F896938FC8B"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
         }
         "Entry"
         {
-        "MsmKey" = "8:_420285D037514501B6A509A3E5CE4B7E"
+        "MsmKey" = "8:_466BCA6960B34082B48FDD85EFF3F278"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
         }
@@ -43,6 +49,12 @@
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
         }
+        "Entry"
+        {
+        "MsmKey" = "8:_F99566C7621C4A3C9A7C7788B3996979"
+        "OwnerKey" = "8:_UNDEFINED"
+        "MsmSig" = "8:_UNDEFINED"
+        }
     }
     "Configurations"
     {
@@ -61,6 +73,14 @@
         "PrivateKeyFile" = "8:"
         "TimeStampServer" = "8:"
         "InstallerBootstrapper" = "3:2"
+            "BootstrapperCfg:{63ACBE69-63AA-4F98-B2B6-99F9E24495F2}"
+            {
+            "Enabled" = "11:TRUE"
+            "PromptEnabled" = "11:TRUE"
+            "PrerequisitesLocation" = "2:1"
+            "Url" = "8:"
+            "ComponentsUrl" = "8:"
+            }
         }
         "Release"
         {
@@ -77,6 +97,14 @@
         "PrivateKeyFile" = "8:"
         "TimeStampServer" = "8:"
         "InstallerBootstrapper" = "3:2"
+            "BootstrapperCfg:{63ACBE69-63AA-4F98-B2B6-99F9E24495F2}"
+            {
+            "Enabled" = "11:TRUE"
+            "PromptEnabled" = "11:TRUE"
+            "PrerequisitesLocation" = "2:1"
+            "Url" = "8:"
+            "ComponentsUrl" = "8:"
+            }
         }
     }
     "Deployable"
@@ -108,6 +136,26 @@
         }
         "File"
         {
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_253886C6DEDF41038D0CEED9996D1679"
+            {
+            "SourcePath" = "8:..\\UkrainianAnalyzer\\bin\\Debug\\net6.0-windows\\tessdata\\pol.traineddata"
+            "TargetName" = "8:pol.traineddata"
+            "Tag" = "8:"
+            "Folder" = "8:_0857CC2203C845F5A575C1ACB2156DD5"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:FALSE"
+            "IsolateTo" = "8:"
+            }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_419B38AF8F194D7CAF939F896938FC8B"
             {
             "SourcePath" = "8:..\\UkrainianAnalyzer\\bin\\Debug\\net6.0-windows\\tessdata\\eng.traineddata"
@@ -128,10 +176,10 @@
             "IsDependency" = "11:FALSE"
             "IsolateTo" = "8:"
             }
-            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_420285D037514501B6A509A3E5CE4B7E"
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_466BCA6960B34082B48FDD85EFF3F278"
             {
-            "SourcePath" = "8:..\\..\\..\\..\\..\\Downloads\\text.ico"
-            "TargetName" = "8:text.ico"
+            "SourcePath" = "8:..\\UkrainianAnalyzer\\bin\\Debug\\net6.0-windows\\screenshot.ico"
+            "TargetName" = "8:screenshot.ico"
             "Tag" = "8:"
             "Folder" = "8:_7E9CCF4D1CF34CCC949FEF21BFD144D4"
             "Condition" = "8:"
@@ -174,6 +222,26 @@
             "TargetName" = "8:ukr.traineddata"
             "Tag" = "8:"
             "Folder" = "8:_0857CC2203C845F5A575C1ACB2156DD5"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:FALSE"
+            "IsolateTo" = "8:"
+            }
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_F99566C7621C4A3C9A7C7788B3996979"
+            {
+            "SourcePath" = "8:..\\UkrainianAnalyzer\\bin\\Debug\\net6.0-windows\\text.ico"
+            "TargetName" = "8:text.ico"
+            "Tag" = "8:"
+            "Folder" = "8:_7E9CCF4D1CF34CCC949FEF21BFD144D4"
             "Condition" = "8:"
             "Transitive" = "11:FALSE"
             "Vital" = "11:TRUE"
@@ -387,7 +455,7 @@
             "Target" = "8:_B4F092DC24484FFDB6AAA114CD7688E8"
             "Folder" = "8:_3ABD4074F01E41119B534A482C4AC316"
             "WorkingFolder" = "8:_7E9CCF4D1CF34CCC949FEF21BFD144D4"
-            "Icon" = "8:_420285D037514501B6A509A3E5CE4B7E"
+            "Icon" = "8:_F99566C7621C4A3C9A7C7788B3996979"
             "Feature" = "8:"
             }
         }

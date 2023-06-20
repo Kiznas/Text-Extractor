@@ -1,6 +1,6 @@
 using System.Drawing;
 
-namespace UkrainianAnalyzer
+namespace TextAnalyzer
 { 
     internal static class Program
     {

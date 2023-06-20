@@ -1,4 +1,4 @@
-﻿namespace UkrainianAnalyzer
+﻿namespace TextAnalyzer
 {
     partial class SettingsForm
     {
@@ -28,7 +28,6 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.checkedListBox1 = new System.Windows.Forms.CheckedListBox();
             this.RegularButtonTxt = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
             this.Label = new System.Windows.Forms.Label();
@@ -43,23 +42,9 @@
             this.comboBox1 = new System.Windows.Forms.ComboBox();
             this.SuspendLayout();
             // 
-            // checkedListBox1
-            // 
-            this.checkedListBox1.Font = new System.Drawing.Font("Segoe UI Black", 19F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
-            this.checkedListBox1.FormattingEnabled = true;
-            this.checkedListBox1.Items.AddRange(new object[] {
-            "ukr",
-            "eng",
-            "rus"});
-            this.checkedListBox1.Location = new System.Drawing.Point(12, 12);
-            this.checkedListBox1.Name = "checkedListBox1";
-            this.checkedListBox1.Size = new System.Drawing.Size(120, 115);
-            this.checkedListBox1.TabIndex = 0;
-            this.checkedListBox1.SelectedIndexChanged += new System.EventHandler(this.checkedListBox1_SelectedIndexChanged);
-            // 
             // RegularButtonTxt
             // 
-            this.RegularButtonTxt.Location = new System.Drawing.Point(141, 104);
+            this.RegularButtonTxt.Location = new System.Drawing.Point(6, 109);
             this.RegularButtonTxt.MaxLength = 1;
             this.RegularButtonTxt.Name = "RegularButtonTxt";
             this.RegularButtonTxt.Size = new System.Drawing.Size(118, 23);
@@ -71,7 +56,7 @@
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(138, 32);
+            this.label1.Location = new System.Drawing.Point(3, 37);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(89, 12);
             this.label1.TabIndex = 3;
@@ -80,7 +65,7 @@
             // Label
             // 
             this.Label.AutoSize = true;
-            this.Label.Location = new System.Drawing.Point(139, 83);
+            this.Label.Location = new System.Drawing.Point(4, 88);
             this.Label.Name = "Label";
             this.Label.Size = new System.Drawing.Size(89, 12);
             this.Label.TabIndex = 4;
@@ -90,7 +75,7 @@
             // 
             this.label3.AutoSize = true;
             this.label3.Font = new System.Drawing.Font("Segoe UI Black", 11F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
-            this.label3.Location = new System.Drawing.Point(140, 4);
+            this.label3.Location = new System.Drawing.Point(5, 9);
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(118, 20);
             this.label3.TabIndex = 5;
@@ -101,7 +86,7 @@
             // 
             this.label2.AutoSize = true;
             this.label2.Font = new System.Drawing.Font("Segoe UI Black", 11F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
-            this.label2.Location = new System.Drawing.Point(264, 4);
+            this.label2.Location = new System.Drawing.Point(129, 9);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(105, 20);
             this.label2.TabIndex = 6;
@@ -111,7 +96,7 @@
             // colorFill
             // 
             this.colorFill.AutoSize = true;
-            this.colorFill.Location = new System.Drawing.Point(266, 83);
+            this.colorFill.Location = new System.Drawing.Point(131, 88);
             this.colorFill.Name = "colorFill";
             this.colorFill.Size = new System.Drawing.Size(65, 12);
             this.colorFill.TabIndex = 10;
@@ -120,7 +105,7 @@
             // colorMain
             // 
             this.colorMain.AutoSize = true;
-            this.colorMain.Location = new System.Drawing.Point(265, 32);
+            this.colorMain.Location = new System.Drawing.Point(130, 37);
             this.colorMain.Name = "colorMain";
             this.colorMain.Size = new System.Drawing.Size(65, 12);
             this.colorMain.TabIndex = 9;
@@ -129,7 +114,7 @@
             // button1
             // 
             this.button1.BackColor = System.Drawing.Color.Cyan;
-            this.button1.Location = new System.Drawing.Point(264, 53);
+            this.button1.Location = new System.Drawing.Point(129, 58);
             this.button1.Name = "button1";
             this.button1.Size = new System.Drawing.Size(102, 23);
             this.button1.TabIndex = 11;
@@ -139,7 +124,7 @@
             // button2
             // 
             this.button2.BackColor = System.Drawing.Color.Black;
-            this.button2.Location = new System.Drawing.Point(265, 102);
+            this.button2.Location = new System.Drawing.Point(130, 107);
             this.button2.Name = "button2";
             this.button2.Size = new System.Drawing.Size(102, 23);
             this.button2.TabIndex = 12;
@@ -154,7 +139,7 @@
             "CTRL",
             "SHFT",
             "WIN"});
-            this.comboBox1.Location = new System.Drawing.Point(141, 55);
+            this.comboBox1.Location = new System.Drawing.Point(6, 60);
             this.comboBox1.Name = "comboBox1";
             this.comboBox1.Size = new System.Drawing.Size(117, 20);
             this.comboBox1.TabIndex = 13;
@@ -165,7 +150,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(378, 137);
+            this.ClientSize = new System.Drawing.Size(237, 137);
             this.Controls.Add(this.comboBox1);
             this.Controls.Add(this.button2);
             this.Controls.Add(this.button1);
@@ -176,7 +161,6 @@
             this.Controls.Add(this.Label);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.RegularButtonTxt);
-            this.Controls.Add(this.checkedListBox1);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
             this.Name = "SettingsForm";
             this.Text = "SettingsForm";
@@ -188,8 +172,6 @@
         }
 
         #endregion
-
-        private CheckedListBox checkedListBox1;
         private TextBox RegularButtonTxt;
         private Label label1;
         private Label Label;

@@ -10,27 +10,22 @@ using System.Windows.Forms;
 using Tesseract;
 using static System.Windows.Forms.DataFormats;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
-using static UkrainianAnalyzer.Form1;
+using static TextAnalyzer.Form1;
 
-namespace UkrainianAnalyzer
+namespace TextAnalyzer
 {
     public partial class SettingsForm : Form
     {
-        public event Action<string> StringChanged;
         public event Action<Color> MainColorChanged;
         public event Action<Color> FillColorChanged;
         public event Action<int> RegularKeyChanged;
         public event Action<int> SpecialKeyChanged;
 
         private int regularKey;
-        public SettingsForm()
+        public SettingsForm(Color mainColor, Color fillColor, int regularKey, int specialKey)
         {
             InitializeComponent();
-            Hide();
-        }
-        private void checkedListBox1_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            StringChanged?.Invoke(checkedListBox1.Text);
+            InitializeParameters(mainColor, fillColor, regularKey, specialKey);
             Hide();
         }
 
@@ -103,6 +98,23 @@ namespace UkrainianAnalyzer
         private void RegularButtonTxt_TextChanged(object sender, EventArgs e)
         {
             RegularKeyChanged?.Invoke(regularKey);
+        }
+
+        private void InitializeParameters(Color mainColor, Color fillColor, int regularHotkey, int specialHotey)
+        {
+            button1.BackColor = mainColor;
+            button2.BackColor = fillColor;
+            RegularButtonTxt.Text = Convert.ToString(Convert.ToChar(regularHotkey));
+            SpecialKeys selectedKey = (SpecialKeys)specialHotey;
+            comboBox1.Text = selectedKey.ToString();
+        }
+
+        private enum SpecialKeys
+        {
+            ALT = 1,
+            CTRL = 2,
+            SHFT = 4,
+            WIN = 8
         }
     }
 }

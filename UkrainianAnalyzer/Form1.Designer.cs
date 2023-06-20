@@ -1,4 +1,4 @@
-﻿namespace UkrainianAnalyzer
+﻿namespace TextAnalyzer
 {
     partial class Form1
     {
@@ -41,7 +41,6 @@
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
             this.pictureBoxMain = new System.Windows.Forms.PictureBox();
             this.notifyIcon1 = new System.Windows.Forms.NotifyIcon(this.components);
-            this.checkedListBox1 = new System.Windows.Forms.CheckedListBox();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBoxMain)).BeginInit();
             this.SuspendLayout();
             // 
@@ -69,31 +68,12 @@
             this.notifyIcon1.Text = "TEXT EXTRACTOR";
             this.notifyIcon1.Visible = true;
             // 
-            // checkedListBox1
-            // 
-            this.checkedListBox1.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.checkedListBox1.CheckOnClick = true;
-            this.checkedListBox1.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.checkedListBox1.Font = new System.Drawing.Font("Segoe UI", 45F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
-            this.checkedListBox1.FormattingEnabled = true;
-            this.checkedListBox1.Items.AddRange(new object[] {
-            "eng",
-            "rus",
-            "ukr"});
-            this.checkedListBox1.Location = new System.Drawing.Point(0, 0);
-            this.checkedListBox1.Name = "checkedListBox1";
-            this.checkedListBox1.Size = new System.Drawing.Size(445, 248);
-            this.checkedListBox1.Sorted = true;
-            this.checkedListBox1.TabIndex = 10;
-            this.checkedListBox1.SelectedIndexChanged += new System.EventHandler(this.checkedListBox1_SelectedIndexChanged);
-            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.SystemColors.MenuBar;
             this.ClientSize = new System.Drawing.Size(445, 248);
-            this.Controls.Add(this.checkedListBox1);
             this.Controls.Add(this.pictureBoxMain);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
             this.KeyPreview = true;
@@ -111,6 +91,5 @@
         #endregion
         private PictureBox pictureBoxMain;
         private NotifyIcon notifyIcon1;
-        private CheckedListBox checkedListBox1;
     }
 }

@@ -2,8 +2,9 @@ using Tesseract;
 using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
+using System.Text.Json;
 
-namespace UkrainianAnalyzer
+namespace TextAnalyzer
 {
     public partial class Form1 : Form
     {
@@ -15,33 +16,48 @@ namespace UkrainianAnalyzer
         private TesseractEngine ocrEngine;
 
         private bool hotkeyPressed;
-        private bool textMode = true;
         private bool isSelecting = false;
         private bool rectangleExist = false;
-
-        private ToolStripMenuItem positionXItem;
-        private ToolStripMenuItem positionYItem;
 
         private Color mainColor;
         private Color fillColor;
 
-        private int regularKey;
-        private int specialKey;
+        private int regularHotkey;
+        private int specialHotkey;
+
+        private string filePath = "save.txt";
 
         private UserRect rect;
+
+        Dictionary<string, string> languageMapping = new Dictionary<string, string>()
+        {
+            { "US", "eng" },
+            { "Russian", "rus" },
+            { "Ukrainian", "ukr" },
+            { "Polish (Programmers)", "pol" }
+        };
+
 
         public Form1()
         {
             InitializeComponent();
 
-            specialKey = 1; // ALT
-            regularKey = 65; // A
+            if(File.Exists(filePath))
+            {
+                LoadVariablesFromJson(filePath, out regularHotkey, out specialHotkey, out mainColor, out fillColor);
+            }
+            else
+            {
+                specialHotkey = 1; // ALT
+                regularHotkey = 65; // A
+                mainColor = Color.White;
+                fillColor = Color.Black;
+            }
 
             int id = 0;
-            RegisterHotKey(this.Handle, id, specialKey, regularKey);
+            RegisterHotKey(this.Handle, id, specialHotkey, regularHotkey);
 
-            settings = new SettingsForm();
-            settings.StringChanged += ChangeOCRLanguage;
+            settings = new SettingsForm(mainColor, fillColor, regularHotkey, specialHotkey);
             settings.MainColorChanged += MainColorChanged;
             settings.FillColorChanged += FillColorChanged;
             settings.RegularKeyChanged += RegularKeyChanged;
@@ -49,35 +65,21 @@ namespace UkrainianAnalyzer
 
             notifyIcon1.ContextMenuStrip = new ContextMenuStrip();
 
-            ToolStripMenuItem switchItem = new ToolStripMenuItem("Mode");
-
-            positionXItem = new ToolStripMenuItem("TextMode");
-            positionXItem.Click += PositionXItem_Click;
-            switchItem.DropDownItems.Add(positionXItem);
-
-            positionYItem = new ToolStripMenuItem("ScreenshotMode");
-            positionYItem.Click += PositionYItem_Click;
-            switchItem.DropDownItems.Add(positionYItem);
-
             notifyIcon1.ContextMenuStrip.Items.AddRange(new ToolStripItem[]
             {
-                switchItem,
-                new ToolStripMenuItem("SETTINGS", null, new EventHandler(Settings)),
-                new ToolStripMenuItem("EXIT", null, new EventHandler(Exit))
+                new ToolStripMenuItem("Settings", null, new EventHandler(Settings)),
+                new ToolStripMenuItem("Exit", null, new EventHandler(Exit))
             });
 
-            positionXItem.Checked = true;
-
-            mainColor = Color.Cyan;
-            fillColor = Color.Black;
-
             this.AutoScaleMode= AutoScaleMode.Dpi;
+
+            this.WindowState = FormWindowState.Minimized;
         }
         private void pictureBoxMainPaint(object sender, PaintEventArgs e)
         {
             if (!rectangleExist)
             {
-                using (Pen pen = new Pen(mainColor, 2))
+                using (Pen pen = new Pen(mainColor, 2f))
                 {
                     pen.DashStyle = DashStyle.Dash;
                     e.Graphics.DrawRectangle(pen, selectedArea);
@@ -129,7 +131,8 @@ namespace UkrainianAnalyzer
             {
                 rect = new UserRect(selectedArea);
                 rect.SetPictureBox(this.pictureBoxMain, mainColor, fillColor);
-                rect.SelectionApproved += UseOCRorScreenshot;
+                rect.ExtractText += (string mode) => Extract(mode);
+                rect.ExtractScreenshot += (string mode) => Extract(mode);
                 pictureBoxMain.Invalidate();
                 rectangleExist = true;
                 isSelecting = false;
@@ -178,10 +181,6 @@ namespace UkrainianAnalyzer
 
         private void Form1_KeyDown(object sender, KeyEventArgs e)
         {
-            if (e.KeyCode == Keys.Enter)
-            {
-                UseOCRorScreenshot();
-            }
             if (e.KeyCode == Keys.Escape)
             {
                 hotkeyPressed = false;
@@ -199,7 +198,7 @@ namespace UkrainianAnalyzer
             }
         }
 
-        private void UseOCRorScreenshot()
+        private void Extract(string mode)
         {
             isSelecting = false;
             hotkeyPressed = false;
@@ -228,35 +227,43 @@ namespace UkrainianAnalyzer
 
             File.Delete(tempImagePath);
 
-            using (var page = ocrEngine.Process(pixImage))
+            if(mode == "screenshot")
             {
-                string extractedText = page.GetText();
-
-                extractedText = RemoveEmptyLines(extractedText);
-
-                if (textMode)
+                Clipboard.SetImage(croppedBitmap);
+            }
+            else
+            {
+                string myCurrentLanguage = InputLanguage.CurrentInputLanguage.LayoutName;
+                ChangeOCRLanguage(languageMapping[myCurrentLanguage]);
+                using (var page = ocrEngine.Process(pixImage))
                 {
+                    string extractedText = page.GetText();
+
+                    extractedText = RemoveEmptyLines(extractedText);
+
                     if (extractedText.Length > 0)
                     {
                         Clipboard.SetText(extractedText);
                     }
                 }
-                else { Clipboard.SetImage(croppedBitmap); }
-
-                this.FormBorderStyle = FormBorderStyle.Sizable;
-                this.WindowState = FormWindowState.Minimized;
             }
+
+            this.FormBorderStyle = FormBorderStyle.Sizable;
+            this.WindowState = FormWindowState.Minimized;
 
             rectangleExist = false;
             selectedArea = Rectangle.Empty;
-            rect.Dispose();
+            
+            rect?.Dispose();
+            capturedImage?.Dispose();
+            overlayImage?.Dispose();
+            rotatedImage?.Dispose();
+            croppedBitmap?.Dispose();
+            pixImage?.Dispose();
+
+            GC.Collect();
 
             pictureBoxMain.Refresh();
-
-            capturedImage?.Dispose();
-            rotatedImage.Dispose();
-            croppedBitmap.Dispose();
-            pixImage.Dispose();
         }
         
         private string RemoveEmptyLines(string lines)
@@ -268,16 +275,18 @@ namespace UkrainianAnalyzer
         {
             Point cursorPosition = Cursor.Position;
             Screen screen = Screen.FromPoint(cursorPosition);
-            Rectangle workingArea = screen.WorkingArea;
+            Rectangle screenBounds = screen.Bounds;
             this.Location = screen.Bounds.Location;
 
-            int screenWidth = workingArea.Width;
-            int screenHeight = workingArea.Height;
+            pictureBoxMain.Cursor = Cursors.Cross;
+
+            int screenWidth = screenBounds.Width;
+            int screenHeight = screenBounds.Height;
 
             capturedImage = new Bitmap(screenWidth, screenHeight);
             using (Graphics graphics = Graphics.FromImage(capturedImage))
             {
-                graphics.CopyFromScreen(workingArea.Left, workingArea.Top, 0, 0, capturedImage.Size);
+                graphics.CopyFromScreen(screenBounds.Left, screenBounds.Top, 0, 0, capturedImage.Size);
             }
 
             this.WindowState = FormWindowState.Normal;
@@ -348,14 +357,6 @@ namespace UkrainianAnalyzer
             WinKey = 8
         }
 
-        private void checkedListBox1_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            ChangeOCRLanguage(checkedListBox1.Text);
-            checkedListBox1.Visible = false;
-            this.FormBorderStyle = FormBorderStyle.Sizable;
-            this.WindowState = FormWindowState.Minimized;
-        }
-
         public void ChangeOCRLanguage(string lang)
         {
             ocrEngine = new TesseractEngine("./tessdata", lang, EngineMode.Default);
@@ -373,16 +374,16 @@ namespace UkrainianAnalyzer
         }
         private void SpecialKeyChanged(int newSpecialHotkey)
         {
-            specialKey = newSpecialHotkey;
+            specialHotkey = newSpecialHotkey;
             UnregisterHotKey(this.Handle, 0);
-            RegisterHotKey(this.Handle, 0, specialKey, regularKey);
+            RegisterHotKey(this.Handle, 0, specialHotkey, regularHotkey);
         }
 
         private void RegularKeyChanged(int newRegularHotkey)
         {
-            regularKey = newRegularHotkey;
+            regularHotkey = newRegularHotkey;
             UnregisterHotKey(this.Handle, 0);
-            RegisterHotKey(this.Handle, 0, specialKey, regularKey);
+            RegisterHotKey(this.Handle, 0, specialHotkey, regularHotkey);
         }
 
         private void Form1_Resize(object sender, EventArgs e)
@@ -395,20 +396,6 @@ namespace UkrainianAnalyzer
             else if (FormWindowState.Normal == this.WindowState)
             { notifyIcon1.Visible = false; }
         }
-
-        private void PositionXItem_Click(object? sender, EventArgs e)
-        {
-            positionXItem.Checked = true;
-            positionYItem.Checked = false;
-            textMode = true;
-        }
-        private void PositionYItem_Click(object? sender, EventArgs e)
-        {
-            positionXItem.Checked = false;
-            positionYItem.Checked = true;
-            textMode = false;
-        }
-
         private void Settings(object? sender, EventArgs e)
         {
             settings.Show();
@@ -417,7 +404,42 @@ namespace UkrainianAnalyzer
 
         private void Exit(object? sender, EventArgs e)
         {
+            StoreVariablesToJson("save.txt", regularHotkey, specialHotkey, mainColor, fillColor);
             Application.Exit();
         }
+
+        public static void StoreVariablesToJson(string filePath, int hotkeyNormal, int hotkeySpecial, Color mainColor, Color fillColor)
+        {
+            Variables variables = new Variables
+            {
+                HotkeyNormal = hotkeyNormal,
+                HotkeySpecial = hotkeySpecial,
+                MainColorArgb = mainColor.ToArgb(),
+                FillColorArgb = fillColor.ToArgb()
+            };
+
+            string json = JsonSerializer.Serialize(variables, new JsonSerializerOptions { WriteIndented = true });
+
+            File.WriteAllText(filePath, json);
+        }
+
+        public static void LoadVariablesFromJson(string filePath, out int hotkeyNormal, out int hotkeySpecial, out Color mainColor, out Color fillColor)
+        {
+            string json = File.ReadAllText(filePath);
+
+            Variables variables = JsonSerializer.Deserialize<Variables>(json);
+
+            hotkeyNormal = variables.HotkeyNormal;
+            hotkeySpecial = variables.HotkeySpecial;
+            mainColor = Color.FromArgb(variables.MainColorArgb);
+            fillColor = Color.FromArgb(variables.FillColorArgb);
+        }
+    }
+    public class Variables
+    {
+        public int HotkeyNormal { get; set; }
+        public int HotkeySpecial { get; set; }
+        public int MainColorArgb { get; set; }
+        public int FillColorArgb { get; set; }
     }
 }

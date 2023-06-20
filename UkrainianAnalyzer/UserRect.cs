@@ -1,27 +1,37 @@
 ﻿using System.Drawing;
 using System.Drawing.Drawing2D;
 
-namespace UkrainianAnalyzer
+namespace TextAnalyzer
 {
     public class UserRect
     {
         private PictureBox mPictureBox;
+
         public Rectangle rectangle;
         public Rectangle selectedArea;
+
         public bool allowDeformingDuringMovement = false;
         private bool mIsClick = false;
         private bool mMove = false;
+
         private int oldX;
         private int oldY;
-        private int sizeNodeRect = 10;
-        private const int rotationHandleSize = 15;
+
+        private int buttonWidth = 27;
+        private int buttonHeight = 27;
+        private int sizeNodeRect = 8;
+
+        private const int rotationHandleSize = 12;
+
         public Bitmap mBmp = null;
         public PosSizableRect nodeSelected = PosSizableRect.None;
         public float rotationAngle = 0;
 
-        public event Action SelectionApproved;
+        public event Action <String> ExtractText;
+        public event Action <String> ExtractScreenshot;
 
-        private Icon icon;
+        private Icon textIcon;
+        private Icon screenshotIcon;
 
         private Color mainColor;
         private Color fillColor;
@@ -37,7 +47,8 @@ namespace UkrainianAnalyzer
             RightBottom,
             BottomMiddle,
             RotationHandle,
-            RightBottomHandleButton,
+            TextConfirmHandle,
+            ScreenshotConfirmHandle,
             None
         };
 
@@ -47,11 +58,12 @@ namespace UkrainianAnalyzer
             mIsClick = false;
             mainColor = Color.Cyan;
             fillColor = Color.Black;
-            icon = new Icon("check.ico");
+            textIcon = new Icon("text.ico");
+            screenshotIcon = new Icon("screenshot.ico");
         }
         public void Draw(Graphics g)
         {
-            Pen pen = new Pen(mainColor, 2f);
+            Pen pen = new Pen(mainColor, 1.5f);
             pen.DashStyle = DashStyle.Dash;
 
             PointF[] points = GetPoints();
@@ -60,23 +72,31 @@ namespace UkrainianAnalyzer
             foreach (PosSizableRect pos in Enum.GetValues(typeof(PosSizableRect)))
             {
                 using Brush brush = new SolidBrush(mainColor);
-                if (pos == PosSizableRect.RotationHandle)
+
+                switch (pos)
                 {
-                    g.FillEllipse(brush, GetRect(pos));
-                }
-                else if (pos == PosSizableRect.RightBottomHandleButton)
-                {
-                    g.DrawIcon(icon, GetRect(pos));
-                }
-                else
-                {
-                    g.FillRectangle(brush, GetRect(pos));
-                    Rectangle handleRect = GetRect(pos);
-                    int smallRectSize = 6;
-                    int smallRectX = handleRect.X + handleRect.Width / 2 - smallRectSize / 2;
-                    int smallRectY = handleRect.Y + handleRect.Height / 2 - smallRectSize / 2;
-                    Brush fillColorBrush = new SolidBrush(fillColor);
-                    g.FillRectangle(fillColorBrush, smallRectX, smallRectY, smallRectSize, smallRectSize);
+                    case PosSizableRect.RotationHandle:
+                        g.FillEllipse(brush, GetRect(pos));
+                        break;
+
+                    case PosSizableRect.TextConfirmHandle:
+                        g.DrawIcon(textIcon, GetRect(pos));
+                        break;
+
+                    case PosSizableRect.ScreenshotConfirmHandle:
+                        g.DrawIcon(screenshotIcon, GetRect(pos));
+                        break;
+
+                    default:
+                        g.FillRectangle(brush, GetRect(pos));
+                        Rectangle handleRect = GetRect(pos);
+                        int smallRectSize = sizeNodeRect - 2;
+                        int smallRectX = handleRect.X + handleRect.Width / 2 - smallRectSize / 2;
+                        int smallRectY = handleRect.Y + handleRect.Height / 2 - smallRectSize / 2;
+                        Brush fillColorBrush = new SolidBrush(fillColor);
+                        g.FillRectangle(fillColorBrush, smallRectX, smallRectY, smallRectSize, smallRectSize);
+                        break;
+
                 }
             }
         }
@@ -109,9 +129,14 @@ namespace UkrainianAnalyzer
             nodeSelected = PosSizableRect.None;
             nodeSelected = GetNodeSelectable(e.Location);
 
-            if(nodeSelected == PosSizableRect.RightBottomHandleButton)
+            if(nodeSelected == PosSizableRect.TextConfirmHandle)
             {
-                SelectionApproved.Invoke();
+                ExtractText.Invoke("text");
+            }
+
+            if (nodeSelected == PosSizableRect.ScreenshotConfirmHandle)
+            {
+                ExtractScreenshot.Invoke("screenshot");
             }
 
             if (rectangle.Contains(new Point(e.X, e.Y)))
@@ -296,15 +321,19 @@ namespace UkrainianAnalyzer
 
                 case PosSizableRect.RotationHandle:
                     Rectangle rotationHandleRect = new Rectangle((int)(centerX - rotationHandleSize / 2), (int)(rectangle.Y - rotationHandleSize - 10), rotationHandleSize, rotationHandleSize);
-            return RotatePoint(rotationHandleRect, centerX, centerY, sin, cos);
+                    return RotatePoint(rotationHandleRect, centerX, centerY, sin, cos);
 
-                case PosSizableRect.RightBottomHandleButton:
-                    int buttonX = (int)(rectangle.X + rectangle.Width + 2); 
-                    int buttonY = (int)(rectangle.Y + rectangle.Height + 2); 
-                    int buttonWidth = 30; 
-                    int buttonHeight = 30; 
-                    Rectangle button = new Rectangle(buttonX, buttonY, buttonWidth, buttonHeight);
-                    return RotatePoint(button, centerX, centerY, sin, cos);
+                case PosSizableRect.TextConfirmHandle:
+                    int but1X = (int)(rectangle.X + rectangle.Width - buttonWidth); 
+                    int but1Y = (int)(rectangle.Y + rectangle.Height + 6); 
+                    Rectangle button1 = new Rectangle(but1X, but1Y, buttonWidth, buttonHeight);
+                    return RotatePoint(button1, centerX, centerY, sin, cos);
+
+                case PosSizableRect.ScreenshotConfirmHandle:
+                    int but2X = (int)(rectangle.X + rectangle.Width - 2.2f * buttonWidth);
+                    int but2Y = (int)(rectangle.Y + rectangle.Height + 6);
+                    Rectangle button2 = new Rectangle(but2X, but2Y, buttonWidth, buttonHeight);
+                    return RotatePoint(button2, centerX, centerY, sin, cos);
 
                 default:
                     return new Rectangle();
@@ -357,8 +386,8 @@ namespace UkrainianAnalyzer
             selectedArea = Rectangle.Empty;
             mBmp?.Dispose();
             mBmp = null;
-            icon?.Dispose();
-            icon = null;
+            textIcon?.Dispose();
+            textIcon = null;
         }
 
         public bool IsOverNode(Point x)
@@ -414,8 +443,12 @@ namespace UkrainianAnalyzer
                 case PosSizableRect.RotationHandle:
                     return Cursors.SizeWE;
 
-                case PosSizableRect.RightBottomHandleButton:
+                case PosSizableRect.TextConfirmHandle:
                     return Cursors.Hand;
+
+                case PosSizableRect.ScreenshotConfirmHandle:
+                    return Cursors.Hand;
+
                 default:
                     return Cursors.Default;
             }
