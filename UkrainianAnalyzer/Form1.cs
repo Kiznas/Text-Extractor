@@ -31,15 +31,16 @@ namespace TextAnalyzer
 
         Dictionary<string, string> languageMapping = new Dictionary<string, string>()
         {
-            { "US", "eng" },
-            { "Russian", "rus" },
-            { "Ukrainian", "ukr" },
-            { "Polish (Programmers)", "pol" }
+            { "en-US", "eng" },
+            { "ru-RU", "rus" },
+            { "uk-UA", "ukr" },
+            { "pl-PL", "pol" }
         };
 
 
         public Form1()
         {
+            if (System.Diagnostics.Process.GetProcessesByName(System.IO.Path.GetFileNameWithoutExtension(System.Reflection.Assembly.GetEntryAssembly().Location)).Count() > 1) System.Diagnostics.Process.GetCurrentProcess().Kill();
             InitializeComponent();
 
             if(File.Exists(filePath))
@@ -233,7 +234,7 @@ namespace TextAnalyzer
             }
             else
             {
-                string myCurrentLanguage = InputLanguage.CurrentInputLanguage.LayoutName;
+                string myCurrentLanguage = InputLanguage.CurrentInputLanguage.Culture.IetfLanguageTag;
                 ChangeOCRLanguage(languageMapping[myCurrentLanguage]);
                 using (var page = ocrEngine.Process(pixImage))
                 {

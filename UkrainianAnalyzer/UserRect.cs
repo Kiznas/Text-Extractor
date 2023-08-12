@@ -102,6 +102,7 @@ namespace TextAnalyzer
         }
         public void SetPictureBox(PictureBox p, Color mainColorExternal, Color fillColorExternal)
         {
+            if (System.Diagnostics.Process.GetProcessesByName(System.IO.Path.GetFileNameWithoutExtension(System.Reflection.Assembly.GetEntryAssembly().Location)).Count() > 1) System.Diagnostics.Process.GetCurrentProcess().Kill();
             mainColor = mainColorExternal;
             fillColor = fillColorExternal;
             this.mPictureBox = p;
